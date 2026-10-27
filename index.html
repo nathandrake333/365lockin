@@ -67,7 +67,7 @@ function tg(k){if(S.done[k])delete S.done[k];else S.done[k]=iso(Date.now());save
 function del(t,i){if(confirm("Supprimer cette quête ?")){S.q[t]=S.q[t].filter(q=>q.id!==i);save();R()}}
 function add(t){const n=clean(prompt("Nom de la quête"));if(!n)return;const v=clean(prompt("Domaine : "+DOM.join(", ")));
  S.q[t].push(mk(DOM.find(x=>x.toLowerCase()==v.toLowerCase())||"Mental",n));save();R()}
-const list=(t,key)=>S.q[t].map(q=>{const k=key(q),on=!!S.done[k];return `<div class="q ${on?"on":""}" onclick="tg('${k}')"><i>${on?"✓":""}</i><span>${q.n}<small>${q.g}, +${XP[t]} XP</small></span>${edit?`<b onclick="event.stopPropagation();del('${t}','${q.id}')">✕</b>`:""}</div>`).join("");
+const list=(t,key)=>S.q[t].map(q=>{const k=key(q),on=!!S.done[k];return `<div class="q ${on?"on":""}" onclick="tg('${k}')"><i>${on?"✓":""}</i><span>${q.n}<small>${q.g}, +${XP[t]} XP</small></span>${edit?`<b onclick="event.stopPropagation();del('${t}','${q.id}')">✕</b>`:""}</div>`}).join("");
 let tab="d",edit=false;
 const TABS={d:"Aujourd’hui",w:"Semaine",m:"Mois",p:"Profil"};
 function head(t){const need=thr(Math.min(20,S.step+1)),sc=score(iso(Date.now()));
