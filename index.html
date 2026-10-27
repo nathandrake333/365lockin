@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="fr"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#060b18">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon.svg">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<title>Le Système 365</title>
+<style>
+:root{--bg:#060b18;--card:#0d1630;--line:#1d3a7a;--ac:#38b6ff;--tx:#e6f0ff;--mu:#8ea2c8;--ok:#3ddc97;--bad:#ff5c7a;color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.4 "Trebuchet MS",system-ui,sans-serif;padding:env(safe-area-inset-top) 0 calc(72px + env(safe-area-inset-bottom))}
+main{max-width:640px;margin:auto;padding:14px}
+h1{margin:0;font:700 30px/1.1 Georgia,serif;color:var(--ac);text-shadow:0 0 12px var(--ac)}
+h2{font:700 17px Georgia,serif;margin:4px 0 10px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:12px;box-shadow:0 0 16px #38b6ff1f}
+.mu{color:var(--mu);font-size:13px}
+.q{display:flex;gap:10px;align-items:center;padding:11px;border:1px solid var(--line);border-radius:10px;margin-bottom:8px;cursor:pointer}
+.q i{flex:none;width:24px;height:24px;border:2px solid var(--ac);border-radius:6px;display:grid;place-items:center;color:var(--ok);font-style:normal;font-weight:700}
+.q.on{opacity:.55}.q.on span{text-decoration:line-through}
+.q span{flex:1}.q small{display:block;color:var(--mu);font-size:12px}
+.q b{color:var(--bad);padding:4px 8px}
+nav{position:fixed;bottom:0;left:0;right:0;display:flex;background:#081024ee;border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom)}
+nav button{flex:1;padding:15px 0;background:none;border:0;color:var(--mu);font:inherit}
+nav button.a{color:var(--ac);text-shadow:0 0 8px var(--ac)}
+.bar{height:8px;background:#12234a;border-radius:6px;overflow:hidden;flex:1}
+.bar div{height:100%;background:linear-gradient(90deg,#1d6fff,#38b6ff)}
+.dm{display:flex;gap:8px;align-items:center;margin:7px 0}.dm span{width:104px;font-size:13px}.dm em{width:40px;font-style:normal;text-align:right;color:var(--mu);font-size:12px}
+.cal{display:grid;grid-template-columns:repeat(31,1fr);gap:2px}.cal u{aspect-ratio:1;border-radius:2px}
+.rank{font:700 34px Georgia,serif;margin:6px 0}
+.btn,select{background:#12234a;color:var(--tx);border:1px solid var(--line);border-radius:8px;padding:9px 12px;font:inherit;margin:4px 4px 0 0}
+.warn{color:var(--bad)}.win{color:var(--ok)}
+</style></head><body><main id="app"></main>
+<nav id="nav"></nav>
+<script>
+const RANKS=["E","D","C","B","A","S","National"],TIERS=["Débutant","Confirmé","Avancé"];
+const DOM=["Hygiène","Travail","Sport","Finances","Alimentation","Sommeil","Relations","Apprentissage","Mental"];
+const XP={d:10,w:40,m:150},K="systeme365";
+const rn=i=>RANKS[Math.floor(i/3)]+" "+TIERS[i%3];
+const thr=i=>.10+.04*i;
+const iso=d=>{const z=new Date(d);return z.getFullYear()+"-"+String(z.getMonth()+1).padStart(2,"0")+"-"+String(z.getDate()).padStart(2,"0")};
+const addD=(s,n)=>{const d=new Date(s+"T12:00");d.setDate(d.getDate()+n);return iso(d)};
+const dayN=s=>Math.round((new Date(iso(Date.now())+"T12:00")-new Date(s+"T12:00"))/864e5)+1;
+const clean=s=>String(s||"").replace(/[<>&"'`\\]/g,"").trim().slice(0,60);
+let id=0;const nid=()=>Date.now().toString(36)+(id++);
+const mk=(g,n)=>({id:nid(),g,n});
+function fresh(){return{start:iso(Date.now()),target:16,step:0,last:0,since:0,low:0,done:{},log:[],q:{
+d:[mk("Hygiène","Douche et soins du jour"),mk("Travail","2 h de travail concentré"),mk("Sport","30 min d’activité physique"),mk("Finances","Noter mes dépenses"),mk("Alimentation","Repas équilibrés et 2 L d’eau"),mk("Sommeil","Me coucher avant minuit"),mk("Relations","Échanger avec un proche"),mk("Apprentissage","20 min de lecture"),mk("Mental","10 min de calme")],
+w:[mk("Sport","3 séances de sport"),mk("Finances","Faire le point sur mon budget"),mk("Relations","Voir un ami ou la famille"),mk("Travail","Atteindre l’objectif de la semaine"),mk("Hygiène","Ménage complet")],
+m:[mk("Finances","Atteindre l’objectif d’épargne"),mk("Sport","Battre un record personnel"),mk("Relations","Organiser une sortie"),mk("Apprentissage","Terminer un livre ou un module"),mk("Travail","Atteindre l’objectif du mois")]}}}
+let S;try{S=JSON.parse(localStorage.getItem(K)||"null")}catch(e){}
+if(!S)S=fresh();
+const save=()=>{try{localStorage.setItem(K,JSON.stringify(S))}catch(e){}};
+const xpOn=d=>{let s=0;for(const k in S.done)if(S.done[k]===d)s+=XP[k[0]];return s};
+const max7=()=>7*S.q.d.length*10+S.q.w.length*40+S.q.m.length*150*7/30||1;
+const score=d=>{let s=0;for(let i=0;i<7;i++)s+=xpOn(addD(d,-i));return Math.min(1,s/max7())};
+function proc(){const t=dayN(S.start),upto=Math.min(t-1,365);
+ for(let n=S.last+1;n<=upto;n++){const sc=score(addD(S.start,n-1));S.since++;
+  if(S.step<20&&S.since>=7&&sc>=thr(S.step+1)){S.step++;S.since=0;S.low=0;S.log.push([n,1,S.step])}
+  else if(S.step>0&&sc<thr(S.step)-.05){if(++S.low>=2){S.step--;S.low=0;S.since=0;S.log.push([n,-1,S.step])}}
+  else S.low=0;
+  S.last=n}
+ save()}
+function tg(k){if(S.done[k])delete S.done[k];else S.done[k]=iso(Date.now());save();R()}
+function del(t,i){if(confirm("Supprimer cette quête ?")){S.q[t]=S.q[t].filter(q=>q.id!==i);save();R()}}
+function add(t){const n=clean(prompt("Nom de la quête"));if(!n)return;const v=clean(prompt("Domaine : "+DOM.join(", ")));
+ S.q[t].push(mk(DOM.find(x=>x.toLowerCase()==v.toLowerCase())||"Mental",n));save();R()}
+const list=(t,key)=>S.q[t].map(q=>{const k=key(q),on=!!S.done[k];return `<div class="q ${on?"on":""}" onclick="tg('${k}')"><i>${on?"✓":""}</i><span>${q.n}<small>${q.g}, +${XP[t]} XP</small></span>${edit?`<b onclick="event.stopPropagation();del('${t}','${q.id}')">✕</b>`:""}</div>`).join("");
+let tab="d",edit=false;
+const TABS={d:"Aujourd’hui",w:"Semaine",m:"Mois",p:"Profil"};
+function head(t){const need=thr(Math.min(20,S.step+1)),sc=score(iso(Date.now()));
+ const lock=Math.max(0,7-S.since);
+ return `<div class="card"><h1>Le Système</h1><div class="mu">Jour ${Math.min(t,365)} sur 365, objectif : ${rn(S.target)}</div>
+ <div class="rank">${rn(S.step)}</div>
+ <div class="dm"><div class="bar"><div style="width:${Math.min(100,sc/need*100)}%"></div></div><em>${Math.round(sc*100)}%</em></div>
+ <div class="mu">Forme sur 7 jours, ${S.step<20?`${Math.round(need*100)}% requis pour monter`:"palier maximal"}.${lock&&S.step<20?` Prochaine promotion possible dans ${lock} j.`:""}</div>
+ ${S.low?`<div class="warn">Attention : deuxième jour sous le seuil, une rétrogradation approche.</div>`:""}</div>`}
+function R(){proc();const t=dayN(S.start),today=iso(Date.now());let h=head(t);
+ if(t>365)h+=`<div class="card"><h2 class="${S.step>=S.target?"win":"warn"}">${S.step>=S.target?"Victoire : objectif atteint":"Échec : objectif non atteint"}</h2><div class="mu">Rang final : ${rn(S.step)}.</div></div>`;
+ if(t<1)h+=`<div class="card">Le défi commence bientôt.</div>`;
+ else if(tab=="d")h+=`<div class="card"><h2>Quêtes du jour</h2>${list("d",q=>"d:"+today+":"+q.id)}<button class="btn" onclick="add('d')">Ajouter</button><button class="btn" onclick="edit=!edit;R()">${edit?"Terminer":"Modifier"}</button></div>`;
+ else if(tab=="w"){const w=Math.floor((Math.min(t,365)-1)/7);h+=`<div class="card"><h2>Quêtes de la semaine ${w+1}</h2>${list("w",q=>"w:"+w+":"+q.id)}<button class="btn" onclick="add('w')">Ajouter</button><button class="btn" onclick="edit=!edit;R()">${edit?"Terminer":"Modifier"}</button></div>`}
+ else if(tab=="m"){const m=Math.floor((Math.min(t,365)-1)/30);h+=`<div class="card"><h2>Boss du mois ${m+1}</h2>${list("m",q=>"m:"+m+":"+q.id)}<button class="btn" onclick="add('m')">Ajouter</button><button class="btn" onclick="edit=!edit;R()">${edit?"Terminer":"Modifier"}</button></div>`}
+ else h+=profile(t,today);
+ app.innerHTML=h;nav.innerHTML=Object.entries(TABS).map(([k,v])=>`<button class="${k==tab?"a":""}" onclick="tab='${k}';R()">${v}</button>`).join("")}
+function profile(t,today){
+ const dm=DOM.map(g=>{const qs=S.q.d.filter(q=>q.g===g);if(!qs.length)return"";let a=0,b=0;for(let i=0;i<7;i++){const d=addD(today,-i);qs.forEach(q=>{b++;if(S.done["d:"+d+":"+q.id])a++})}const p=Math.round(a/b*100);return `<div class="dm"><span>${g}</span><div class="bar"><div style="width:${p}%"></div></div><em>${p}%</em></div>`}).join("");
+ const cal=Array.from({length:365},(_,i)=>{const n=i+1,d=addD(S.start,i),c=S.q.d.filter(q=>S.done["d:"+d+":"+q.id]).length/(S.q.d.length||1);
+  return `<u style="background:${n>t?"#0d1a3a":c>=.8?"#3ddc97":c>=.4?"#e8c14a":c>0?"#ff9a5c":n<t?"#ff5c7a":"#1d3a7a"}"></u>`}).join("");
+ const log=S.log.slice(-6).reverse().map(l=>`<div class="mu">Jour ${l[0]} : ${l[1]>0?"promu":"rétrogradé"} en ${rn(l[2])}</div>`).join("")||`<div class="mu">Aucun changement de rang pour l’instant.</div>`;
+ return `<div class="card"><h2>Domaines de vie (7 derniers jours)</h2>${dm}</div>
+ <div class="card"><h2>Les 365 jours</h2><div class="cal">${cal}</div></div>
+ <div class="card"><h2>Historique</h2>${log}</div>
+ <div class="card"><h2>Réglages</h2><div class="mu">Rang à atteindre au jour 365</div>
+ <select onchange="S.target=+this.value;save();R()">${Array.from({length:21},(_,i)=>`<option value="${i}" ${i==S.target?"selected":""}>${rn(i)}</option>`).join("")}</select><br>
+ <button class="btn" onclick="exp()">Exporter la sauvegarde</button><button class="btn" onclick="imp.click()">Importer</button>
+ <button class="btn" onclick="if(confirm('Tout effacer et recommencer au jour 1 ?')){S=fresh();save();R()}">Recommencer</button>
+ <input id="imp" type="file" accept=".json" hidden onchange="load(this.files[0])"></div>`}
+function exp(){const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([JSON.stringify(S)],{type:"application/json"}));a.download="systeme365-"+iso(Date.now())+".json";a.click()}
+function load(f){if(!f)return;const r=new FileReader();r.onload=()=>{try{const o=JSON.parse(r.result);if(!o.q||!o.start)throw 0;S=o;save();R()}catch(e){alert("Fichier de sauvegarde invalide.")}};r.readAsText(f)}
+R();
+if("serviceWorker" in navigator&&location.protocol!=="file:")navigator.serviceWorker.register("sw.js");
+</script></body></html>
